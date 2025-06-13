@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Manage Advertisements - MovieZone Admin</title>
+  <style>
+    body { font-family: Arial, sans-serif; background: #121212; color: #eee; padding: 20px; }
+    h2, h3 { 
+      background: linear-gradient(270deg, #ff0000, #ff7f00, #ffff00, #00ff00, #0000ff, #4b0082, #9400d3);
+      background-size: 400% 400%; -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+      animation: gradientShift 10s ease infinite; display: inline-block; font-size: 28px; margin-bottom: 20px;
+    }
+    @keyframes gradientShift { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }
+    form { max-width: 600px; margin-bottom: 40px; border: 1px solid #333; padding: 20px; border-radius: 8px;}
+    .form-group { margin-bottom: 15px; }
+    .form-group label { display: block; margin-bottom: 5px; font-weight: bold; color: #ddd; }
+    input[type="text"], input[type="url"], button, select { width: 100%; padding: 10px; margin-bottom: 15px; border-radius: 5px; border: none; font-size: 16px; background: #222; color: #eee; }
+    input[type="checkbox"] { width: auto; margin-right: 10px; }
+    button { background: #1db954; color: #000; font-weight: 700; cursor: pointer; transition: background 0.3s ease; }
+    button:hover { background: #17a34a; }
+    table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+    th, td { padding: 10px; text-align: left; border-bottom: 1px solid #333; }
+    th { background: #282828; }
+    .action-buttons { display: flex; gap: 5px; }
+    .delete-btn, .edit-btn { color: #fff; padding: 5px 10px; border-radius: 5px; text-decoration: none; font-size: 14px; border: none; cursor: pointer; }
+    .delete-btn { background: #e44d26; }
+    .edit-btn { background: #007bff; }
+    .back-to-admin { display: inline-block; margin-bottom: 20px; color: #1db954; font-weight: bold; }
+  </style>
+</head>
+<body>
+  <a href="{{ url_for('admin') }}" class="back-to-admin">&larr; Back to Main Admin Panel</a>
+  
+  <h2>{% if ad_to_edit %}Edit Advertisement{% else %}Add New Advertisement{% endif %}</h2>
+  <form method="post" action="{{ url_for('edit_ad', ad_id=ad_to_edit._id) if ad_to_edit else url_for('ads_admin') }}">
+    <div class="form-group">
+        <label for="title">Ad Title (Internal reference):</label>
+        <input type="text" name="title" value="{{ ad_to_edit.title if ad_to_edit else '' }}" required />
+    </div>
+    <div class="form-group">
+        <label for="image_url">Ad Image URL:</label>
+        <input type="url" name="image_url" value="{{ ad_to_edit.image_url if ad_to_edit else '' }}" required />
+    </div>
+    <div class="form-group">
+        <label for="destination_url">Destination URL:</label>
+        <input type="url" name="destination_url" value="{{ ad_to_edit.destination_url if ad_to_edit else '' }}" required />
+    </div>
+    <div class="form-group">
+        <label for="placement">Placement:</label>
+        <select name="placement" required>
+            <option value="homepage_top" {% if ad_to_edit and ad_to_edit.placement == 'homepage_top' %}selected{% endif %}>Homepage Top</option>
+            <option value="details_bottom" {% if ad_to_edit and ad_to_edit.placement == 'details_bottom' %}selected{% endif %}>Movie/Series Detail Page</option>
+        </select>
+    </div>
+    <div class="form-group">
+        <input type="checkbox" name="is_active" value="true" {% if ad_to_edit and ad_to_edit.is_active or not ad_to_edit %}checked{% endif %}>
+        <label>Is this ad active?</label>
+    </div>
+    <button type="submit">{% if ad_to_edit %}Update Ad{% else %}Add Ad{% endif %}</button>
+  </form>
+
+  <hr>
+  <h3>Existing Advertisements</h3>
+  <table>
+    <thead><tr><th>Title</th><th>Placement</th><th>Status</th><th>Actions</th></tr></thead>
+    <tbody>
+      {% for ad in ads %}
+      <tr>
+        <td>{{ ad.title }}</td>
+        <td>{{ ad.placement | replace('_', ' ') | title }}</td>
+        <td>{% if ad.is_active %}Active{% else %}Inactive{% endif %}</td>
+        <td class="action-buttons">
+          <a href="{{ url_for('edit_ad', ad_id=ad._id) }}" class="edit-btn">Edit</a>
+          <form method="POST" action="{{ url_for('delete_ad', ad_id=ad._id) }}" onsubmit="return confirm('Delete this ad?');" style="margin:0;padding:0;">
+              <button type="submit" class="delete-btn">Delete</button>
+          </form>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</body>
+</html>
