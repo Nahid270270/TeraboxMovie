@@ -1,4 +1,8 @@
+import os
+
 class Config:
-    SECRET_KEY = 'your_secret_key_here'
-    # DATABASE_URI = 'sqlite:///your_database.db' # উদাহরণস্বরূপ
-    # অন্যান্য কনফিগারেশন সেটিংস
+    MONGO_URI = os.getenv("MONGO_URI")
+    TMDB_API_KEY = os.getenv("TMDB_API_KEY")
+    ADMIN_USERNAME = os.getenv("ADMIN_USERNAME", "admin")
+    ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "password")
+    SECRET_KEY = os.getenv("SECRET_KEY", "your_secret_key_here") # সেশন ম্যানেজমেন্টের জন্য
