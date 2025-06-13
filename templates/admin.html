@@ -1,16 +1,37 @@
-<!DOCTYPE html>
-<html>
-<head>
-  <title>Admin Panel - MovieZone</title>
-  </head>
-<body>
-  <a href="{{ url_for('ads_admin') }}" style="background: #007bff; color: white; padding: 10px 15px; border-radius: 5px; text-decoration: none; display: inline-block; margin-bottom: 20px;">Manage Advertisements</a>
+<h2>Add New Movie</h2>
+<form action="{{ url_for('admin') }}" method="POST" enctype="multipart/form-data">
+    <label for="title">Movie Title:</label><br>
+    <input type="text" id="title" name="title" required><br><br>
 
-  <h2>Add New Movie</h2>
-  <h2 style="margin-top: 40px;">Search Content</h2>
-  <hr>
+    <label for="description">Description:</label><br>
+    <textarea id="description" name="description" rows="4" cols="50"></textarea><br><br>
 
-  <h2>Manage Existing Content</h2>
-  </body>
-</html>
+    <label for="tmdb_id">TMDb ID (Optional, for auto-fetch):</label><br>
+    <input type="text" id="tmdb_id" name="tmdb_id"><br><br>
+
+    <label for="video_file">Upload Video File:</label><br>
+    <input type="file" id="video_file" name="video_file" accept="video/*"><br><br>
+
+    <label for="poster_file">Upload Poster Image (Optional):</label><br>
+    <input type="file" id="poster_file" name="poster_file" accept="image/*"><br><br>
+
+    <label for="type">Content Type:</label><br>
+    <select id="type" name="type">
+        <option value="movie">Movie</option>
+        <option value="series">Series</option>
+    </select><br><br>
+
+    <label for="quality">Quality:</label><br>
+    <select id="quality" name="quality">
+        <option value="HD">HD</option>
+        <option value="FHD">FHD</option>
+        <option value="4K">4K</option>
+        <option value="TRENDING">TRENDING</option>
+    </select><br><br>
+
+    <label for="is_coming_soon">Coming Soon?</label>
+    <input type="checkbox" id="is_coming_soon" name="is_coming_soon" value="true"><br><br>
+
+    <input type="submit" value="Add Movie/Series">
+</form>
 
