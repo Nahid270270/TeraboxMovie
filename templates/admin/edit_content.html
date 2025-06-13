@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Edit Content - MovieZone</title>
+  <style>
+    body { font-family: Arial, sans-serif; background: #121212; color: #eee; padding: 20px; }
+    h2 { 
+      background: linear-gradient(270deg, #ff0000, #ff7f00, #ffff00, #00ff00, #0000ff, #4b0082, #9400d3);
+      background-size: 400% 400%;
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      animation: gradientShift 10s ease infinite;
+      display: inline-block;
+      font-size: 28px;
+      margin-bottom: 20px;
+    }
+    @keyframes gradientShift {
+      0% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+      100% { background-position: 0% 50%; }
+    }
+    form { max-width: 600px; margin-bottom: 40px; border: 1px solid #333; padding: 20px; border-radius: 8px;}
+    
+    .form-group {
+        margin-bottom: 15px;
+    }
+    .form-group label {
+        display: block;
+        margin-bottom: 5px;
+        font-weight: bold;
+        color: #ddd;
+    }
+    input[type="text"], input[type="url"], textarea, button, select, input[type="number"] {
+      width: 100%;
+      padding: 10px;
+      margin-bottom: 15px;
+      border-radius: 5px;
+      border: none;
+      font-size: 16px;
+      background: #222;
+      color: #eee;
+    }
+    input[type="checkbox"] {
+        width: auto;
+        margin-right: 10px;
+    }
+    textarea {
+        resize: vertical;
+        min-height: 80px;
+    }
+    .link-input-group input[type="url"] {
+        margin-bottom: 5px;
+    }
+    .link-input-group p {
+        font-size: 14px;
+        color: #bbb;
+        margin-bottom: 5px;
+    }
+
+    button {
+      background: #1db954;
+      color: #000;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background 0.3s ease;
+    }
+    button:hover {
+      background: #17a34a;
+    }
+    .back-to-admin {
+        display: inline-block;
+        margin-bottom: 20px;
+        color: #1db954;
+        text-decoration: none;
+        font-weight: bold;
+    }
+    .back-to-admin:hover {
+        text-decoration: underline;
+    }
+  </style>
+</head>
+<body>
+  <a href="{{ url_for('admin_bp.admin_panel') }}" class="back-to-admin">&larr; Back to Admin Panel</a>
+  <h2>Edit Content: {{ movie.title }}</h2>
+  <form method="post">
+    <div class="form-group">
+        <label for="title">Movie/Series Title:</label>
+        <input type="text" name="title" id="title" placeholder="Movie or Series Title" value="{{ movie.title }}" required />
+    </div>
+
+    <div class="form-group">
+        <label for="content_type">Content Type:</label>
+        <select name="content_type" id="content_type" onchange="toggleEpisodeFields()">
+            <option value="movie" {% if movie.type == 'movie' %}selected{% endif %}>Movie</option>
+            <option value="series" {% if movie.type == 'series' %}selected{% endif %}>TV Series / Web Series</option>
+        </select>
+    </div>
+
+    <div class="form-group" id="movie_download_links_group"> {# Group for movie links #}
+        <label>Download Links (only paste URL):</label>
+        <div class="link-input-group">
+            <p>480p Download Link [Approx. 590MB]:</p>
+            <input type="url" name="link_480p" placeholder="Enter 480p download link" value="{% for link in movie.links %}{% if link.quality == '480p' %}{{ link.url }}{% endif %}{% endfor %}" />
+        </div>
+        <div class="link-input-group">
+            <p>720p Download Link [Approx. 1.4GB]:</p>
+            <input type="url" name="link_720p" placeholder="Enter 720p download link" value="{% for link in movie.links %}{% if link.quality == '720p' %}{{ link.url }}{% endif %}{% endfor %}" />
+        </div>
+        <div class="link-input-group">
+            <p>1080p Download Link [Approx. 2.9GB]:</p>
+            <input type="url" name="link_1080p" placeholder="Enter 1080p download link" value="{% for link in movie.links %}{% if link.quality == '1080p' %}{{ link.url }}{% endif %}{% endfor %}" />
+        </div>
+    </div>
+
+    <div id="episode_fields" style="display: none;"> {# Initially hidden for series episodes #}
+        <h3>Episodes</h3>
+        <div id="episodes_container">
+            {# Existing episodes will be loaded here in edit mode #}
+            {% if movie.type == 'series' and movie.episodes %}
+                {% for episode in movie.episodes %}
+                    <div class="episode-item" style="border: 1px solid #444; padding: 10px; margin-bottom: 10px; border-radius: 5px;">
+                        <div class="form-group">
+                            <label>Episode Number:</label>
+                            <input type="number" name="episode_number[]" value="{{ episode.episode_number }}" required />
+                        </div>
+                        <div class="form-group">
+                            <label>Episode Title:</label>
+                            <input type="text" name="episode_title[]" value="{{ episode.title }}" placeholder="e.g., Episode 1: The Beginning" required />
+                        </div>
+                        <div class="form-group">
+                            <label>Episode Overview (Optional):</label>
+                            <textarea name="episode_overview[]" rows="3" placeholder="Overview for this episode">{{ episode.overview }}</textarea>
+                        </div>
+                        <div class="link-input-group">
+                            <p>480p Link:</p>
+                            <input type="url" name="episode_link_480p[]" value="{% for link in episode.links %}{% if link.quality == '480p' %}{{ link.url }}{% endif %}{% endfor %}" placeholder="Enter 480p download link" />
+                        </div>
+                        <div class="link-input-group">
+                            <p>720p Link:</p>
+                            <input type="url" name="episode_link_720p[]" value="{% for link in episode.links %}{% if link.quality == '720p' %}{{ link.url }}{% endif %}{% endfor %}" placeholder="Enter 720p download link" />
+                        </div>
+                        <div class="link-input-group">
+                            <p>1080p Link:</p>
+                            <input type="url" name="episode_link_1080p[]" value="{% for link in episode.links %}{% if link.quality == '1080p' %}{{ link.url }}{% endif %}{% endfor %}" placeholder="Enter 1080p download link" />
+                        </div>
+                        <button type="button" onclick="removeEpisode(this)" class="delete-btn" style="background: #e44d26;">Remove Episode</button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+        </div>
+        <button type="button" onclick="addEpisodeField()">Add New Episode</button>
+    </div>
+
+
+    <div class="form-group">
+        <label for="quality">Quality Tag (e.g., HD, Hindi Dubbed):</label>
+        <input type="text" name="quality" id="quality" placeholder="Quality tag" value="{{ movie.quality }}" />
+    </div>
+
+    <div class="form-group">
+        <label for="top_label">Poster Top Label (Optional, e.g., Special Offer, New):</label>
+        <input type="text" name="top_label" id="top_label" placeholder="Custom label on poster top" value="{{ movie.top_label }}" />
+    </div>
+
+    <div class="form-group">
+        <input type="checkbox" name="is_trending" id="is_trending" value="true" {% if movie.quality == 'TRENDING' %}checked{% endif %}>
+        <label for="is_trending" style="display: inline-block;">Is Trending?</label>
+    </div>
+
+    <div class="form-group">
+        <input type="checkbox" name="is_coming_soon" id="is_coming_soon" value="true" {% if movie.is_coming_soon %}checked{% endif %}>
+        <label for="is_coming_soon" style="display: inline-block;">Is Coming Soon?</label>
+    </div>
+
+    <div class="form-group">
+        <label for="overview">Overview (Optional - used if TMDb info not found):</label>
+        <textarea name="overview" id="overview" rows="5" placeholder="Enter movie/series overview or synopsis">{{ movie.overview }}</textarea>
+    </div>
+
+    <div class="form-group">
+        <label for="poster_url">Poster URL (Optional - direct image link, used if TMDb info not found):</label>
+        <input type="url" name="poster_url" id="poster_url" placeholder="e.g., https://example.com/poster.jpg" value="{{ movie.poster }}" />
+    </div>
+
+    <div class="form-group">
+        <label for="year">Release Year (Optional - used if TMDb info not found):</label>
+        <input type="text" name="year" id="year" placeholder="e.g., 2023" value="{{ movie.year }}" />
+    </div>
+
+    <div class="form-group">
+        <label for="original_language">Original Language (Optional - used if TMDb info not found):</label>
+        <input type="text" name="original_language" id="original_language" placeholder="e.g., Bengali, English" value="{{ movie.original_language }}" />
+    </div>
+
+    <div class="form-group">
+        <label for="genres">Genres (Optional - comma-separated, used if TMDb info not found):</label>
+        <input type="text" name="genres" id="genres" placeholder="e.g., Action, Drama, Thriller" value="{{ movie.genres | join(', ') }}" />
+    </div>
+    
+    <button type="submit">Update Content</button>
+  </form>
+  <script>
+    function toggleEpisodeFields() {
+        var contentType = document.getElementById('content_type').value;
+        var episodeFields = document.getElementById('episode_fields');
+        var movieDownloadLinksGroup = document.getElementById('movie_download_links_group');
+        
+        if (contentType === 'series') {
+            episodeFields.style.display = 'block';
+            if (movieDownloadLinksGroup) {
+                movieDownloadLinksGroup.style.display = 'none';
+            }
+        } else {
+            episodeFields.style.display = 'none';
+            if (movieDownloadLinksGroup) {
+                movieDownloadLinksGroup.style.display = 'block';
+            }
+        }
+    }
+
+    function addEpisodeField(episode = {}) {
+        const container = document.getElementById('episodes_container');
+        const newEpisodeDiv = document.createElement('div');
+        newEpisodeDiv.className = 'episode-item';
+        newEpisodeDiv.style.cssText = 'border: 1px solid #444; padding: 10px; margin-bottom: 10px; border-radius: 5px;';
+        
+        const episodeNumber = episode.episode_number || '';
+        const episodeTitle = episode.title || '';
+        const episodeOverview = episode.overview || '';
+        const link480p = (episode.links && episode.links.find(l => l.quality === '480p')) ? episode.links.find(l => l.quality === '480p').url : '';
+        const link720p = (episode.links && episode.links.find(l => l.quality === '720p')) ? episode.links.find(l => l.quality === '720p').url : '';
+        const link1080p = (episode.links && episode.links.find(l => l.quality === '1080p')) ? episode.links.find(l => l.quality === '1080p').url : '';
+
+        newEpisodeDiv.innerHTML = `
+            <div class="form-group">
+                <label>Episode Number:</label>
+                <input type="number" name="episode_number[]" value="${episodeNumber}" required />
+            </div>
+            <div class="form-group">
+                <label>Episode Title:</label>
+                <input type="text" name="episode_title[]" value="${episodeTitle}" placeholder="e.g., Episode 1: The Beginning" required />
+            </div>
+            <div class="form-group">
+                <label>Episode Overview (Optional):</label>
+                <textarea name="episode_overview[]" rows="3" placeholder="Overview for this episode">${episodeOverview}</textarea>
+            </div>
+            <div class="link-input-group">
+                <p>480p Link:</p>
+                <input type="url" name="episode_link_480p[]" value="${link480p}" placeholder="Enter 480p download link" />
+            </div>
+            <div class="link-input-group">
+                <p>720p Link:</p>
+                <input type="url" name="episode_link_720p[]" value="${link720p}" placeholder="Enter 720p download link" />
+            </div>
+            <div class="link-input-group">
+                <p>1080p Link:</p>
+                <input type="url" name="episode_link_1080p[]" value="${link1080p}" placeholder="Enter 1080p download link" />
+            </div>
+            <button type="button" onclick="removeEpisode(this)" class="delete-btn" style="background: #e44d26;">Remove Episode</button>
+        `;
+        container.appendChild(newEpisodeDiv);
+    }
+
+    function removeEpisode(button) {
+        button.closest('.episode-item').remove();
+    }
+
+    // Call on page load to set initial state based on current movie type
+    document.addEventListener('DOMContentLoaded', function() {
+        toggleEpisodeFields(); // Set initial visibility
+        // If it's an edit page for a series, ensure episode fields are visible and loaded
+        var movieType = document.getElementById('content_type').value;
+        if (movieType === 'series' && typeof movie !== 'undefined' && movie.episodes) {
+             // Episodes are already loaded by Jinja in the template, no need to add dynamically
+             // unless we want to allow adding *new* empty fields on load for a fresh series.
+             // For existing series, the current setup where Jinja renders them is fine.
+        }
+    });
+  </script>
+</body>
+</html>
