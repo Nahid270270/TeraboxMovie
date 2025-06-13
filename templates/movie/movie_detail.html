@@ -1,0 +1,300 @@
+{% extends 'layouts/base.html' %}
+
+{% block title %}
+  {{ movie.title if movie else "Movie Not Found" }} - MovieZone Details
+{% endblock %}
+
+{% block header_content %}
+  <a href="{{ url_for('home') }}" class="back-button"><i class="fas fa-arrow-left"></i>Back</a>
+  <h1>MovieZone</h1>
+  {# No search bar on detail page #}
+{% endblock %}
+
+{% block content %}
+  {% if movie %}
+  <div class="movie-detail-container">
+    <div class="main-info">
+        <div class="detail-poster-wrapper">
+            {% if movie.poster %}
+              <img class="detail-poster" src="{{ movie.poster }}" alt="{{ movie.title }}">
+            {% else %}
+              <div class="detail-poster" style="background:#333; display:flex;align-items:center;justify-content:center;color:#777; font-size:18px; min-height: 250px;">
+                No Image
+              </div>
+            {% endif %}
+            {% if movie.is_coming_soon %}
+                <div class="coming-soon-badge">COMING SOON</div>
+            {% elif movie.quality %}
+              <div class="badge {% if movie.quality == 'TRENDING' %}trending{% endif %}">{{ movie.quality }}</div>
+            {% endif %}
+        </div>
+        <div class="detail-info">
+          <h2 class="detail-title">{{ movie.title }}</h2>
+          <div class="detail-meta">
+              {% if movie.release_date %}<span><strong>Release:</strong> {{ movie.release_date }}</span>{% endif %}
+              {% if movie.vote_average %}<span><strong>Rating:</strong> {{ "%.1f"|format(movie.vote_average) }}/10 <i class="fas fa-star" style="color:#FFD700;"></i></span>{% endif %}
+              {% if movie.original_language %}<span><strong>Language:</strong> {{ movie.original_language | upper }}</span>{% endif %}
+              {% if movie.genres %}<span><strong>Genres:</strong> {{ movie.genres | join(', ') }}</span>{% endif %}
+          </div>
+          <p class="detail-overview">{{ movie.overview }}</p>
+        </div>
+    </div>
+    
+    <div class="download-section">
+      {% if movie.type == 'movie' %}
+        <h3>Download Links</h3>
+        {% if movie.links and movie.links|length > 0 %}
+          {% for link_item in movie.links %}
+          <div class="download-item">
+            <p class="download-quality-info">({{ link_item.quality }}) [{{ link_item.size }}]</p>
+            <div class="download-button-wrapper">
+              <a class="download-button" href="{{ link_item.url }}" target="_blank" rel="noopener">Download</a>
+            </div>
+          </div>
+          {% endfor %}
+        {% else %}
+          <p class="no-link-message">No download links available yet.</p>
+        {% endif %}
+      {% elif movie.type == 'series' and movie.episodes and movie.episodes|length > 0 %}
+        <h3>Episodes</h3>
+        {% for episode in movie.episodes | sort(attribute='episode_number') %}
+        <div class="download-item" style="border-top: 1px solid #333; padding-top: 15px; margin-top: 15px;">
+          <h4 style="color: #1db954; font-size: 20px; margin-bottom: 10px;">Episode {{ episode.episode_number }}: {{ episode.title }}</h4>
+          {% if episode.overview %}
+            <p style="color: #ccc; font-size: 15px; margin-bottom: 10px;">{{ episode.overview }}</p>
+          {% endif %}
+          {% if episode.links and episode.links|length > 0 %}
+            {% for link_item in episode.links %}
+            <div class="download-button-wrapper" style="margin-bottom: 10px;">
+              <a class="download-button" href="{{ link_item.url }}" target="_blank" rel="noopener">Download ({{ link_item.quality }}) [{{ link_item.size }}]</a>
+            </div>
+            {% endfor %}
+          {% else %}
+            <p class="no-link-message" style="margin-top: 0; padding: 0; background: none;">No download links for this episode.</p>
+          {% endif %}
+        </div>
+        {% endfor %}
+      {% else %}
+        <p class="no-link-message">No download links or episodes available yet for this content type.</p>
+      {% endif %}
+    </div>
+
+  </div>
+  {% else %}
+    <p style="text-align:center; color:#999; margin-top: 40px;">Movie not found.</p>
+  {% endif %}
+{% endblock %}
+
+<style>
+  /* Detail Page Specific Styles */
+  .movie-detail-container {
+    max-width: 1000px;
+    margin: 20px auto;
+    padding: 25px;
+    background: #181818;
+    border-radius: 8px;
+    box-shadow: 0 0 15px rgba(0,0,0,0.7);
+    display: flex;
+    flex-direction: column;
+    gap: 25px;
+  }
+
+  .main-info {
+      display: flex;
+      flex-direction: column;
+      gap: 25px;
+  }
+
+  .detail-poster-wrapper {
+      position: relative;
+      width: 100%;
+      max-width: 300px;
+      flex-shrink: 0;
+      align-self: center;
+  }
+  .detail-poster {
+    width: 100%;
+    height: auto;
+    border-radius: 8px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.5);
+    display: block;
+  }
+  .detail-poster-wrapper .badge {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      font-size: 14px;
+      padding: 4px 8px;
+      border-radius: 5px;
+      background: #1db954; /* Consistent badge color */
+      color: #000;
+      font-weight: 700;
+      text-transform: uppercase;
+  }
+  .detail-poster-wrapper .badge.trending {
+    background: linear-gradient(45deg, #ff0077, #ff9900);
+    color: #fff;
+  }
+  .detail-poster-wrapper .coming-soon-badge {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      font-size: 14px;
+      padding: 4px 8px;
+      border-radius: 5px;
+      background-color: #007bff; /* Blue for Coming Soon */
+      color: #fff;
+      font-weight: 700;
+      text-transform: uppercase;
+  }
+
+  .detail-info {
+    flex-grow: 1;
+  }
+  .detail-title {
+    font-size: 38px;
+    font-weight: 700;
+    margin: 0 0 10px 0;
+    color: #eee;
+    text-shadow: 0 0 5px rgba(0,0,0,0.5);
+  }
+  .detail-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 15px;
+      margin-bottom: 20px;
+      font-size: 16px;
+      color: #ccc;
+  }
+  .detail-meta span {
+      background: #282828;
+      padding: 5px 10px;
+      border-radius: 5px;
+      white-space: nowrap;
+  }
+  .detail-meta strong {
+      color: #fff;
+  }
+
+  .detail-overview {
+    font-size: 17px;
+    line-height: 1.7;
+    color: #ccc;
+    margin-bottom: 30px;
+  }
+
+  /* --- DOWNLOAD LINKS SECTION --- */
+  .download-section {
+    width: 100%;
+    text-align: center;
+    margin-top: 30px;
+    background: #1f1f1f;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.5);
+  }
+  .download-section h3 {
+    font-size: 24px;
+    font-weight: 700;
+    color: #00ff00; /* Green color for heading */
+    margin-bottom: 20px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 10px;
+  }
+  .download-section h3::before,
+  .download-section h3::after {
+    content: '[↓]';
+    color: #00ff00;
+    font-size: 20px;
+  }
+
+  .download-item {
+    margin-bottom: 15px;
+  }
+  .download-quality-info {
+    font-size: 18px;
+    color: #ff9900; /* Orange color for quality info */
+    margin-bottom: 10px;
+    font-weight: 600;
+  }
+  .download-button-wrapper {
+    width: 100%;
+    max-width: 300px; /* Limit button width */
+    margin: 0 auto;
+  }
+  .download-button {
+    display: block; /* Make button full width of its wrapper */
+    padding: 12px 20px;
+    border-radius: 30px; /* Pill shape */
+    background: linear-gradient(to right, #6a0dad, #8a2be2, #4b0082); /* Purple gradient */
+    color: #fff;
+    font-size: 18px;
+    font-weight: 700;
+    text-align: center;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+    border: none;
+  }
+  .download-button:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 6px 15px rgba(0,0,0,0.7);
+    background: linear-gradient(to right, #7b2df2, #9a4beb, #5c1bb2); /* Slightly brighter purple */
+  }
+
+  .no-link-message {
+      color: #999;
+      font-size: 16px;
+      text-align: center;
+      width: 100%;
+      padding: 20px;
+      background: #1f1f1f;
+      border-radius: 8px;
+  }
+
+
+  /* Responsive Adjustments for Detail Page */
+  @media (min-width: 769px) {
+      .main-info {
+          flex-direction: row;
+          align-items: flex-start;
+      }
+      .detail-poster-wrapper {
+          margin-right: 40px;
+      }
+      .detail-title {
+          font-size: 44px;
+      }
+      /* No direct "action-buttons" anymore, removed specific style */
+  }
+
+  @media (max-width: 768px) {
+    header h1 { font-size: 20px; margin: 0; }
+    .back-button { font-size: 16px; left: 15px; }
+    .movie-detail-container { padding: 15px; margin: 15px auto; gap: 15px; }
+    .main-info { gap: 15px; }
+    .detail-poster-wrapper { max-width: 180px; }
+    .detail-poster-wrapper .badge, .detail-poster-wrapper .coming-soon-badge { font-size: 12px; padding: 2px 6px; top: 8px; left: 8px; }
+    .detail-title { font-size: 28px; }
+    .detail-meta { font-size: 14px; gap: 10px; margin-bottom: 15px; }
+    .detail-overview { font-size: 15px; margin-bottom: 20px; }
+    
+    .download-section h3 { font-size: 20px; }
+    .download-section h3::before,
+    .download-section h3::after { font-size: 18px; }
+    .download-quality-info { font-size: 16px; }
+    .download-button { font-size: 16px; padding: 10px 15px; }
+  }
+
+  @media (max-width: 480px) {
+      .detail-title { font-size: 22px; }
+      .detail-meta { font-size: 13px; }
+      .detail-overview { font-size: 14px; }
+      .download-section h3 { font-size: 18px; }
+      .download-section h3::before,
+      .download-section h3::after { font-size: 16px; }
+      .download-quality-info { font-size: 14px; }
+      .download-button { font-size: 14px; padding: 8px 12px; }
+  }
+    </style>
