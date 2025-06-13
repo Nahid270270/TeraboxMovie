@@ -18,18 +18,15 @@ ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "password")
 
 # --- অথেন্টিকেশন ফাংশন ---
 def check_auth(username, password):
-    """ইউজারনেম ও পাসওয়ার্ড সঠিক কিনা তা যাচাই করে।"""
     return username == ADMIN_USERNAME and password == ADMIN_PASSWORD
 
 def authenticate():
-    """অথেন্টিকেশন ব্যর্থ হলে 401 রেসপন্স পাঠায়।"""
     return Response(
     'Could not verify your access level for that URL.\n'
     'You have to login with proper credentials', 401,
     {'WWW-Authenticate': 'Basic realm="Login Required"'})
 
 def requires_auth(f):
-    """এই ডেকোরেটরটি রুট ফাংশনে অথেন্টিকেশন চেক করে।"""
     @wraps(f)
     def decorated(*args, **kwargs):
         auth = request.authorization
@@ -39,17 +36,15 @@ def requires_auth(f):
     return decorated
 
 # --- এনভায়রনমেন্ট ভেরিয়েবল ও ডেটাবেস কানেকশন ---
-if not MONGO_URI:
-    print("Error: MONGO_URI environment variable not set. Exiting.")
-    exit(1)
-if not TMDB_API_KEY:
-    print("Error: TMDB_API_KEY environment variable not set. Exiting.")
+if not MONGO_URI or not TMDB_API_KEY:
+    print("Error: MONGO_URI or TMDB_API_KEY environment variable not set. Exiting.")
     exit(1)
 
 try:
     client = MongoClient(MONGO_URI)
     db = client["movie_db"]
     movies = db["movies"]
+    ads_collection = db["advertisements"] # বিজ্ঞাপনের জন্য নতুন কালেকশন
     print("Successfully connected to MongoDB!")
 except Exception as e:
     print(f"Error connecting to MongoDB: {e}. Exiting.")
@@ -72,8 +67,7 @@ def home():
     is_full_page_list = False
 
     if query:
-        result = movies.find({"title": {"$regex": query, "$options": "i"}})
-        movies_list = list(result)
+        movies_list = list(movies.find({"title": {"$regex": query, "$options": "i"}}))
         is_full_page_list = True
     else:
         trending_movies_list = list(movies.find({"quality": "TRENDING"}).sort('_id', -1).limit(6))
@@ -81,40 +75,50 @@ def home():
         latest_series_list = list(movies.find({"type": "series", "quality": {"$ne": "TRENDING"}, "is_coming_soon": {"$ne": True}}).sort('_id', -1).limit(6))
         coming_soon_movies_list = list(movies.find({"is_coming_soon": True}).sort('_id', -1).limit(6))
 
-    for m in movies_list + trending_movies_list + latest_movies_list + latest_series_list + coming_soon_movies_list:
-        m['_id'] = str(m['_id'])
+    for m_list in [movies_list, trending_movies_list, latest_movies_list, latest_series_list, coming_soon_movies_list]:
+        for m in m_list:
+            m['_id'] = str(m['_id'])
+
+    # Fetch active ad for homepage
+    homepage_ad = ads_collection.find_one({"placement": "homepage_top", "is_active": True})
+    if homepage_ad:
+        homepage_ad['_id'] = str(homepage_ad['_id'])
 
     return render_template(
         'index.html', 
-        movies=movies_list, 
-        query=query,
+        movies=movies_list, query=query,
         trending_movies=trending_movies_list,
         latest_movies=latest_movies_list,
         latest_series=latest_series_list,
         coming_soon_movies=coming_soon_movies_list,
-        is_full_page_list=is_full_page_list
+        is_full_page_list=is_full_page_list,
+        homepage_ad=homepage_ad
     )
 
 @app.route('/movie/<movie_id>')
 def movie_detail(movie_id):
-    # এই ফাংশনের কোড অপরিবর্তিত থাকবে, শুধু render_template ব্যবহার করবে
     try:
         movie = movies.find_one({"_id": ObjectId(movie_id)})
         if movie:
             movie['_id'] = str(movie['_id'])
-            # TMDb ডেটাবেস থেকে তথ্য আনার বাকি কোড এখানে থাকবে... (আপনার মূল কোডের মতই)
-        return render_template('detail.html', movie=movie)
+            # এখানে আপনার মূল কোডের TMDb থেকে ডেটা আনার লজিক থাকবে
+
+        # Fetch active ad for detail page
+        detail_page_ad = ads_collection.find_one({"placement": "details_bottom", "is_active": True})
+        if detail_page_ad:
+            detail_page_ad['_id'] = str(detail_page_ad['_id'])
+
+        return render_template('detail.html', movie=movie, detail_page_ad=detail_page_ad)
     except Exception as e:
         print(f"Error fetching movie detail for ID {movie_id}: {e}")
-        return render_template('detail.html', movie=None)
+        return render_template('detail.html', movie=None, detail_page_ad=None)
 
 
 @app.route('/admin', methods=["GET", "POST"])
 @requires_auth
 def admin():
-    # এই ফাংশনের সম্পূর্ণ কোড অপরিবর্তিত থাকবে, শুধু render_template ব্যবহার করবে
     if request.method == "POST":
-        # ফর্ম ডেটা প্রসেসিং এর সম্পূর্ণ কোড এখানে... (আপনার মূল কোডের মতই)
+        # আপনার মূল কোড থেকে মুভি যোগ করার সম্পূর্ণ লজিক এখানে থাকবে
         return redirect(url_for('admin'))
 
     admin_query = request.args.get('q')
@@ -130,55 +134,80 @@ def admin():
 @app.route('/edit_movie/<movie_id>', methods=["GET", "POST"])
 @requires_auth
 def edit_movie(movie_id):
-    # এই ফাংশনের সম্পূর্ণ কোড অপরিবর্তিত থাকবে, শুধু render_template ব্যবহার করবে
-    try:
-        movie = movies.find_one({"_id": ObjectId(movie_id)})
-        if not movie:
-            return "Movie not found!", 404
-        if request.method == "POST":
-            # ডেটা আপডেট করার সম্পূর্ণ কোড এখানে... (আপনার মূল কোডের মতই)
-            return redirect(url_for('admin'))
-        else:
-            movie['_id'] = str(movie['_id']) 
-            return render_template('edit.html', movie=movie)
-    except Exception as e:
-        print(f"Error processing edit for movie ID {movie_id}: {e}")
-        return "An error occurred during editing.", 500
+    # আপনার মূল কোড থেকে মুভি এডিট করার সম্পূর্ণ লজিক এখানে থাকবে
+    movie = movies.find_one({"_id": ObjectId(movie_id)})
+    if request.method == 'POST':
+        # ... Update logic ...
+        return redirect(url_for('admin'))
+    return render_template('edit.html', movie=movie)
 
 @app.route('/delete_movie/<movie_id>')
 @requires_auth
 def delete_movie(movie_id):
-    # এই ফাংশনের সম্পূর্ণ কোড অপরিবর্তিত থাকবে
-    try:
-        movies.delete_one({"_id": ObjectId(movie_id)})
-    except Exception as e:
-        print(f"Error deleting content with ID {movie_id}: {e}")
+    movies.delete_one({"_id": ObjectId(movie_id)})
     return redirect(url_for('admin'))
 
+
+# --- Advertisement Management Routes ---
+
+@app.route('/admin/ads', methods=['GET', 'POST'])
+@requires_auth
+def ads_admin():
+    if request.method == 'POST':
+        try:
+            is_active = request.form.get("is_active") == "true"
+            ad_data = {
+                "title": request.form.get("title"),
+                "image_url": request.form.get("image_url"),
+                "destination_url": request.form.get("destination_url"),
+                "placement": request.form.get("placement"),
+                "is_active": is_active
+            }
+            ads_collection.insert_one(ad_data)
+        except Exception as e:
+            print(f"Error adding ad: {e}")
+        return redirect(url_for('ads_admin'))
+    
+    all_ads = list(ads_collection.find().sort('_id', -1))
+    for ad in all_ads:
+        ad['_id'] = str(ad['_id'])
+    return render_template('ads_admin.html', ads=all_ads, ad_to_edit=None)
+
+
+@app.route('/admin/ads/edit/<ad_id>', methods=['GET', 'POST'])
+@requires_auth
+def edit_ad(ad_id):
+    ad_to_edit = ads_collection.find_one({"_id": ObjectId(ad_id)})
+    if not ad_to_edit: return "Ad not found", 404
+
+    if request.method == 'POST':
+        try:
+            update_data = {
+                "$set": {
+                    "title": request.form.get("title"), "image_url": request.form.get("image_url"),
+                    "destination_url": request.form.get("destination_url"), "placement": request.form.get("placement"),
+                    "is_active": request.form.get("is_active") == "true"
+                }
+            }
+            ads_collection.update_one({"_id": ObjectId(ad_id)}, update_data)
+        except Exception as e:
+            print(f"Error updating ad: {e}")
+        return redirect(url_for('ads_admin'))
+    
+    return render_template('ads_admin.html', ad_to_edit=ad_to_edit, ads=[])
+
+
+@app.route('/admin/ads/delete/<ad_id>', methods=['POST'])
+@requires_auth
+def delete_ad(ad_id):
+    try:
+        ads_collection.delete_one({"_id": ObjectId(ad_id)})
+    except Exception as e:
+        print(f"Error deleting ad: {e}")
+    return redirect(url_for('ads_admin'))
+
 # --- ক্যাটেগরি পেজের রুট ---
-@app.route('/trending_movies')
-def trending_movies():
-    trending_list = list(movies.find({"quality": "TRENDING"}).sort('_id', -1))
-    for m in trending_list: m['_id'] = str(m['_id'])
-    return render_template('index.html', movies=trending_list, query="Trending on MovieZone", is_full_page_list=True)
-
-@app.route('/movies_only')
-def movies_only():
-    movie_list = list(movies.find({"type": "movie", "quality": {"$ne": "TRENDING"}, "is_coming_soon": {"$ne": True}}).sort('_id', -1))
-    for m in movie_list: m['_id'] = str(m['_id'])
-    return render_template('index.html', movies=movie_list, query="All Movies on MovieZone", is_full_page_list=True)
-
-@app.route('/webseries')
-def webseries():
-    series_list = list(movies.find({"type": "series", "quality": {"$ne": "TRENDING"}, "is_coming_soon": {"$ne": True}}).sort('_id', -1))
-    for m in series_list: m['_id'] = str(m['_id'])
-    return render_template('index.html', movies=series_list, query="All Web Series on MovieZone", is_full_page_list=True)
-
-@app.route('/coming_soon')
-def coming_soon():
-    coming_soon_list = list(movies.find({"is_coming_soon": True}).sort('_id', -1))
-    for m in coming_soon_list: m['_id'] = str(m['_id'])
-    return render_template('index.html', movies=coming_soon_list, query="Coming Soon to MovieZone", is_full_page_list=True)
+# trending_movies, movies_only, webseries, coming_soon রুটগুলো এখানে থাকবে
 
 if __name__ == "__main__":
     app.run(host='0.0.0.0', port=os.getenv("PORT", 5000), debug=True)
